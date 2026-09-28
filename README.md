@@ -1,60 +1,109 @@
-# Proyecto Final Robótica 
-## ITAM
+# Robotics Final Project — ITAM
 
-###### *Diego Amaya 149119
-###### *Gabriel Reynoso 150904
-###### *Gumer Rodríguez 149109
-###### *Julio Sánchez 148221
+Autonomous perception, state estimation, and control for a simulated self-driving car, built for the *Robotics* course at ITAM using ROS Kinetic and the AutoNOMOS Gazebo simulator.
 
-Este repositorio incluye los programas que cumplen con las tres partes del proyecto. El archivo histograma.cpp corresponde a la primera parte (Estimación de estado propio), kalman.cpp corresponde a la segunda (Estimación de estado de obstáculo móvil) y seguimiento.cpp a la tercera (Movimiento para seguir obstáculo móvil). Este proyecto fue hecho en ROS Kinetic. Para la implementación de Gazebo se supone que ya se descargaron los modelos y se ejecuta sin problemas el EK_AutoNOMOS. La documentación está en: https://github.com/EagleKnights/SDI-11911/wiki. También que se tiene descargada la rosbag.bag del link: robotica.itam.mx/rosbags/rosbag_SDI11911.bag . La rosbag debe estar dentro del workspace.
-El primer paso es situarse en la carpeta src y clonar este repositorio mediante el comando:
+**Team "Trifuerza & Ganondorf"**
+- Diego Amaya — 149119
+- Gabriel Reynoso — 150904
+- Gumer Rodríguez — 149109
+- Julio Sánchez — 148221
 
-```
+## Overview
+
+This repository implements the three parts of the final project:
+
+| Part | File | Description |
+|------|------|-------------|
+| 1 — Self state estimation | [`histograma.cpp`](histograma.cpp) | Histogram filter that estimates the car's lane position from lane-marking point clouds, publishing a probability distribution over 8 discrete states. |
+| 2 — Moving obstacle estimation | [`kalman.cpp`](kalman.cpp) | Kalman filter that fuses LiDAR range readings to estimate the position and velocity of a moving obstacle (the lead car). |
+| 3 — Obstacle tracking | [`seguimiento.cpp`](seguimiento.cpp) | "Move to point" control strategy that steers and drives the car to follow the estimated obstacle position. |
+
+A full write-up of the methodology and results is available in [`Proyecto3.pdf`](Proyecto3.pdf) (LaTeX sources under [`Proyecto3Escrito/`](Proyecto3Escrito)).
+
+**Demo video:** https://drive.google.com/open?id=1wyU1Z710jF6q_1p19PAoiZ1Q8jpiKJ3T
+
+## Prerequisites
+
+- ROS Kinetic
+- The [AutoNOMOS_simulation](https://github.com/EagleKnights/SDI-11911/wiki) Gazebo package, downloaded and working (`EK_AutoNOMOS`) — see the linked wiki for setup instructions.
+- The sample bag file [`rosbag_SDI11911.bag`](http://robotica.itam.mx/rosbags/rosbag_SDI11911.bag), placed inside your ROS workspace.
+
+## Setup
+
+Clone this repository into the `src` folder of your ROS workspace:
+
+```bash
 git clone https://github.com/gabreyrom/proyecto_final.git
 ```
-Situarse en el workspace de ROS y ejecutar los siguientes comandos:
-```
+
+From the root of the workspace, build and source it:
+
+```bash
 catkin_make
 source devel/setup.bash
 ```
-Antes de comenzar con la simulación se tiene que iniciar el roscore en una terminal.
 
-### Parte 1:
-Para esta parte se necesitan los datos de la bolsa. Se abren dos terminales situadas en el workspace y en una de ellas se corre el comando:
-```
+Before running any part of the project, start `roscore` in a separate terminal.
+
+## Usage
+
+### Part 1 — Histogram filter (self state estimation)
+
+This part replays recorded sensor data from the bag file. Open two terminals from the workspace root.
+
+Terminal 1 — play back the recorded data:
+```bash
 rosbag play rosbag.bag
 ```
-Y en la otra terminal:
-```
+
+Terminal 2 — run the estimator:
+```bash
 rosrun proyecto_final histograma
 ```
-En esta ventana se imprimirá la posición más probable dependiendo de los datos leídos de la bolsa.
 
-### Parte 2 y 3:
-En esta seccion se utiliza Gazebo, por lo que para inicializarlo se necesita situarse en el directorio de AutoNOMOS_simulation y correr:
+The most likely lane position, computed from the bag data, is printed to this terminal.
 
-```
+### Parts 2 & 3 — Kalman filter and tracking control
+
+These parts run live in Gazebo. From the `AutoNOMOS_simulation` directory, launch the simulation:
+
+```bash
 roslaunch autonomos_gazebo straight_road.launch
 ```
-Una vez abierto, se verán los dos autos en Gazebo. Ahora, estando en el workspace de ROS, se correrá el código que inicializará el filtro de Kalman y el código que permite seguir al otro auto. En terminales diferentes se publican la velocidad y ángulo de giro del carro a seguir.
 
-En una terminal:
-```
+Once Gazebo opens with both cars, run the estimator and the controller from the ROS workspace, each in its own terminal:
+
+Terminal 1 — Kalman filter (obstacle state estimation):
+```bash
 rosrun proyecto_final kalman
 ```
-En otra terminal:
-```
+
+Terminal 2 — tracking controller:
+```bash
 rosrun proyecto_final seguimiento
 ```
-En la terminal para cambiar el giro del volante:
-```
+
+Manually drive the lead car by publishing to its control topics:
+
+```bash
+# Steering angle
 rostopic pub /AutoNOMOS_mini_2/manual_control/steering /std_msgs/Float32 '{data: VALUE}'
-```
-Para cambiar la velocidad:
-```
+
+# Velocity
 rostopic pub /AutoNOMOS_mini_2/manual_control/velocity /std_msgs/Float32 '{data: VALUE}'
+```
+
+In the Gazebo window, the second car will follow the first as it moves.
+
+## Project structure
 
 ```
-En la ventana de Gazebo se verá cómo un carro sigue al otro.
-Se puede encontrar el video explicativo en la siguiente liga:
-https://drive.google.com/open?id=1wyU1Z710jF6q_1p19PAoiZ1Q8jpiKJ3T
+.
+├── histograma.cpp        # Part 1: histogram filter
+├── kalman.cpp             # Part 2: Kalman filter
+├── seguimiento.cpp        # Part 3: tracking controller
+├── CMakeLists.txt         # catkin build configuration
+├── package.xml            # ROS package metadata
+├── Proyecto3.pdf          # Project report
+└── Proyecto3Escrito/      # LaTeX sources for the report
+```
